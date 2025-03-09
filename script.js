@@ -61,7 +61,7 @@ async function fetchReleases({ page = 1 } = {}) {
   
   // Apply search query filtering if provided
   const searchQuery = document.getElementById("searchInput").value.trim();
-  if(searchQuery) {
+  if (searchQuery) {
     query = query.ilike('title', `%${searchQuery}%`);
   }
   
@@ -123,7 +123,7 @@ async function fetchShuffleReleases() {
   
   // Apply search query filtering if provided
   const searchQuery = document.getElementById("searchInput").value.trim();
-  if(searchQuery) {
+  if (searchQuery) {
     query = query.ilike('title', `%${searchQuery}%`);
   }
   
@@ -149,16 +149,16 @@ async function fetchShuffleReleases() {
   }
   const shuffleSize = 5;
   if (count > shuffleSize) {
+    // pick a random offset
     const randomOffset = Math.floor(Math.random() * (count - shuffleSize + 1));
     let rangeQuery = supabaseClient
       .from('releases')
       .select('*')
       .range(randomOffset, randomOffset + shuffleSize - 1);
       
-    if(searchQuery) {
+    if (searchQuery) {
       rangeQuery = rangeQuery.ilike('title', `%${searchQuery}%`);
     }
-      
     if (selectedGenre) {
       rangeQuery = rangeQuery.ilike('genre', `%${selectedGenre}%`);
     }
@@ -349,12 +349,16 @@ function renderTable() {
 
     const tdRarity = document.createElement("td");
     tdRarity.className = "text-center";
-    tdRarity.textContent = release.demand_coeff ? parseFloat(release.demand_coeff).toFixed(2) : "0.00";
+    tdRarity.textContent = release.demand_coeff
+      ? parseFloat(release.demand_coeff).toFixed(2)
+      : "0.00";
     tr.appendChild(tdRarity);
 
     const tdGem = document.createElement("td");
     tdGem.className = "text-center";
-    tdGem.textContent = release.gem_value ? parseFloat(release.gem_value).toFixed(2) : "0.00";
+    tdGem.textContent = release.gem_value
+      ? parseFloat(release.gem_value).toFixed(2)
+      : "0.00";
     tr.appendChild(tdGem);
 
     const tdHave = document.createElement("td");
@@ -369,13 +373,19 @@ function renderTable() {
 
     const tdPrice = document.createElement("td");
     tdPrice.className = "text-center";
-    tdPrice.textContent = release.lowest_price !== undefined ? `${parseFloat(release.lowest_price).toFixed(2)}$` : "N/A";
+    tdPrice.textContent =
+      release.lowest_price !== undefined
+        ? `${parseFloat(release.lowest_price).toFixed(2)}$`
+        : "N/A";
     tr.appendChild(tdPrice);
 
     const tdPreview = document.createElement("td");
     tdPreview.className = "text-center";
     if (release.youtube_links) {
-      const links = release.youtube_links.split(",").map(l => l.trim()).filter(l => l);
+      const links = release.youtube_links
+        .split(",")
+        .map(l => l.trim())
+        .filter(l => l);
       if (links.length > 0) {
         const yID = extractYouTubeID(links[0]);
         if (yID) {
@@ -387,7 +397,8 @@ function renderTable() {
           iframe.setAttribute("aria-label", "YouTube video player");
           iframe.src = `https://www.youtube.com/embed/${yID}?enablejsapi=1&rel=0&modestbranding=1`;
           iframe.frameBorder = "0";
-          iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+          iframe.allow =
+            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
           iframe.allowFullscreen = true;
           iframe.style.width = "220px";
           iframe.style.height = "124px";
@@ -566,6 +577,7 @@ document.querySelectorAll("th[data-sort]").forEach(header => {
     if (sortValue === "NO_SORT") return;
 
     if (sortValue === "USER_RATING") {
+      // "rating_coeff" field in the DB
       if (sortConfig.key === "rating_coeff") {
         sortConfig.order = sortConfig.order === "asc" ? "desc" : "asc";
       } else {
@@ -573,6 +585,7 @@ document.querySelectorAll("th[data-sort]").forEach(header => {
         sortConfig.order = "desc";
       }
     } else {
+      // handle normal fields
       if (sortConfig.key === sortValue) {
         sortConfig.order = sortConfig.order === "asc" ? "desc" : "asc";
       } else {
@@ -626,9 +639,12 @@ function initializeYouTubePlayers() {
           new YT.Player(iframe, {
             events: {
               onStateChange: (event) => {
-                if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                if (
+                  event.data === YT.PlayerState.PAUSED ||
+                  event.data === YT.PlayerState.ENDED
+                ) {
                   markAsInteracted(release.id);
-                  const tr = iframe.closest('tr');
+                  const tr = iframe.closest("tr");
                   if (tr) tr.classList.add("greyed-out");
                 }
               }
@@ -638,6 +654,12 @@ function initializeYouTubePlayers() {
       }
     }
   });
+}
+
+// YouTube callback
+function onYouTubeIframeAPIReady() {
+  youtubeApiReady = true;
+  initializeYouTubePlayers();
 }
 
 // ------------------ Event Tracking ------------------
@@ -689,18 +711,31 @@ function updateFilterButtons() {
 
 // ------------------ DOMContentLoaded ------------------
 document.addEventListener("DOMContentLoaded", async () => {
+  // Dark Mode: default to ON, unless user had previously set it to "false"
+  const darkModeSetting = localStorage.getItem("darkModeEnabled");
+  if (darkModeSetting === null || darkModeSetting !== "false") {
+    document.body.classList.add("dark-mode");
+    localStorage.setItem("darkModeEnabled", "true");
+  } else {
+    document.body.classList.remove("dark-mode");
+  }
+
+  // Initialize filters
   await initializeFilters();
+
+  // Load data based on the current active tab
   if (activeTab === "search") {
     loadData(1);
   } else {
     loadShuffleData();
   }
+
   applySavedColumnWidths();
   makeTableResizable();
   updateSortIndicators();
   updateFilterButtons();
 
-  // Submit filter form
+  // Filter form submit
   document.getElementById("filter-form").addEventListener("submit", (e) => {
     e.preventDefault();
     trackFilterApplied();
@@ -711,7 +746,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Update filters on change
+  // Genre & Style change
   document.getElementById("genre").addEventListener("change", () => {
     trackFilterApplied();
     if (activeTab === "search") {
@@ -731,13 +766,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Dark Mode Toggle
   const darkModeToggle = document.getElementById("darkModeToggle");
-  if (localStorage.getItem("darkModeEnabled") === "true") {
-    document.body.classList.add("dark-mode");
-  } else {
-    document.body.classList.remove("dark-mode");
-  }
   darkModeToggle.addEventListener("click", () => {
-    if (document.body.classList.contains("dark-mode")) {
+    const currentlyDark = document.body.classList.contains("dark-mode");
+    if (currentlyDark) {
       document.body.classList.remove("dark-mode");
       localStorage.setItem("darkModeEnabled", "false");
     } else {
@@ -746,7 +777,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Tab Toggle Event Listeners
+  // Tab Toggle (Search/Shufffle)
   document.getElementById("tab-search").addEventListener("click", (e) => {
     e.preventDefault();
     activeTab = "search";
@@ -766,6 +797,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadShuffleData();
   });
 
+  // Shuffle button
   document.getElementById("shuffle-btn").addEventListener("click", (e) => {
     e.preventDefault();
     activeTab = "shuffle";
